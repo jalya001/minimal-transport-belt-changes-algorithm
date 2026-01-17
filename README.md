@@ -17,9 +17,9 @@ A C++ 17 algorithm that finds the minimum of changes in a grid needed for a path
 ## How to use
 See example.txt for an example of input.
 
-File "header" format:
-<grid_width> <grid_height>
-<start_x> <start_y>
+File "header" format:<br/>
+<grid_width> <grid_height><br/>
+<start_x> <start_y><br/>
 <goal_x> <goal_y>
 
 NB: The grid begins at index 1, not 0.
@@ -29,3 +29,4 @@ NB: The grid begins at index 1, not 0.
 - Never revisits a tile, making its runtime asymptotically dominated by width * height in the worst case.
 - Average memory use growth of 1 byte per grid tile. Running out of memory is a concern on very big grids. (Could have used a bitmap for visited and a hashmap for belts, for many times less use, but that is less cache efficient and has a higher lookup overhead.)
 - Worst case memory use is something like 5 bytes * size of grid * 2/3, but this only happens if your grid is designed a very specific way.
+
