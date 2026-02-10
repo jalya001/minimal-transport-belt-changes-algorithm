@@ -31,7 +31,7 @@ struct PaddedGrid { // Uses 1-based indexing
     inline uint32_t idx(uint16_t x, uint16_t y) {
         return y * (grid_width + 2) + x; // "how many rows +2 for padded grid", then offset x
     }
-    inline bool is_visited(uint32_t index) {
+    inline bool is_visited(uint32_t index) { // Can we combine with set_visited?
         return grid_data[index] & MASK_VISITED;
     }
     inline void set_visited(uint32_t index) {
@@ -87,21 +87,18 @@ struct PaddedGrid { // Uses 1-based indexing
     }
 };
 
-
 inline void expand_enqueue(
     PaddedGrid& pgrid,
     uint16_t x, uint16_t y,
-    vector<pair<uint16_t,uint16_t>>& next_level,
-    uint16_t cost)
+    vector<pair<uint16_t,uint16_t>>& next_level)
 {
     while (true) {
         uint32_t nidx = pgrid.idx(x, y);
         if (pgrid.is_visited(nidx)) break;
 
         pgrid.set_visited(nidx);
-        pgrid.set_cost(x, y, cost);
         next_level.emplace_back(x, y);
-       // cout << "Emblaced back: " << x << ' ' << y << ' ' << nidx << " at cost " << cost << '\n';
+        // cout << "Emblaced back: " << x << ' ' << y << ' ' << nidx << " at cost " << cost << '\n';
 
         uint8_t dir_code = pgrid.get_belt(nidx);
         if (dir_code == 0) break;
@@ -116,15 +113,11 @@ template<int dx, int dy>
 inline void expand_direction(
     PaddedGrid& pgrid,
     uint16_t x, uint16_t y,
-    vector<pair<uint16_t,uint16_t>>& next_level,
-    uint16_t cost)
+    vector<pair<uint16_t,uint16_t>>& next_level)
 {
     uint16_t nx = x + dx;
     uint16_t ny = y + dy;
-    uint32_t nidx = pgrid.idx(nx, ny);
-    if (pgrid.is_visited(nidx)) return;
-
-    expand_enqueue(pgrid, nx, ny, next_level, cost + 1); // Need to check if +1 is compiled away on display false
+    expand_enqueue(pgrid, nx, ny, next_level);
 }
 
 int main() {
@@ -162,24 +155,28 @@ int main() {
     
     uint32_t start_idx = pgrid.idx(start_x, start_y);
     vector<pair<uint16_t,uint16_t>> current_level = {{start_x, start_y}};
+    vector<pair<uint16_t,uint16_t>> next_level;
+    uint16_t cost = 0;
+
+    // extract out somehow
     pgrid.set_visited(start_idx);
     pgrid.set_cost(start_x, start_y, 0);
     uint8_t start_dir_code = pgrid.get_belt(start_idx); // Hacky stuff in case it starts on a belt
-    if (start_dir_code != 0) expand_enqueue(pgrid, start_x + belt_dx[start_dir_code], start_y + belt_dy[start_dir_code], current_level, 0);
-    vector<pair<uint16_t,uint16_t>> next_level;
-
-    uint16_t cost = 0;
+    if (start_dir_code != 0) expand_enqueue(pgrid, start_x + belt_dx[start_dir_code], start_y + belt_dy[start_dir_code], current_level);
+    // extract end
 
     while (true) { // Need to add a condition to fail
         next_level.clear();
-        for(auto [x, y] : current_level) {
+        for (auto [x, y] : current_level) {
+            //cout << x << " " << y << "\n";
+            pgrid.set_cost(x, y, cost);
             if (x == goal_x && y == goal_y) goto end; // For some reason, this performs better than a macro to check on the frontier
             
             // Manually unrolling because compiler is stupid
-            expand_direction<1, 0>(pgrid, x, y, next_level, cost);  // right
-            expand_direction<-1, 0>(pgrid, x, y, next_level, cost); // left
-            expand_direction<0, 1>(pgrid, x, y, next_level, cost);  // down
-            expand_direction<0, -1>(pgrid, x, y, next_level, cost); // up
+            expand_direction<1, 0>(pgrid, x, y, next_level);  // right
+            expand_direction<-1, 0>(pgrid, x, y, next_level); // left
+            expand_direction<0, 1>(pgrid, x, y, next_level);  // down
+            expand_direction<0, -1>(pgrid, x, y, next_level); // up
         }
         swap(current_level, next_level);
         cost++;
